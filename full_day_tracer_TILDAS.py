@@ -11,10 +11,12 @@ from scipy.integrate import simps
 import sys
 import os
 
+makeplot = False
 date = sys.argv[1]
 
 if __name__ == "__main__":
     # read in TILDAS files
+    year, month, day = date[:4], date[4:6], date[6:]
     til_files = glob(f"./data/{date}/TILDAS/*TILDAS*")+glob(f"./data/{date}/*TILDAS*")
     print('TILDAS files:')
     print(til_files)
@@ -31,14 +33,14 @@ if __name__ == "__main__":
             df_list.append(dftemp)
         except:
             print(f'Error reading {til}')
-    df1 = pd.concat(df_list, ignore_index=True)
-    df1['time'] = df1['PC'].apply(dt.datetime.strptime, args=('%H%M%S*%Y%m%d',))
-    df1.set_index('time', inplace=True)
-    df1.sort_index(inplace=True)
-    df1.rename(columns={'CH4 Concentration (ppb)': 'CH4','C2H2 Concentration (ppb)': 'C2H2', 'N2O Concentration (ppb)': 'N2O'}, inplace=True)
-    t0, t1 = df1.index[0], df1.index[-1]
-    time = df1.index
-    
+    tildf = pd.concat(df_list, ignore_index=True)
+    tildf['time'] = tildf['PC'].apply(dt.datetime.strptime, args=('%H%M%S*%Y%m%d',))
+    tildf.set_index('time', inplace=True)
+    tildf.sort_index(inplace=True)
+    tildf.rename(columns={'CH4 Concentration (ppb)': 'CH4','C2H2 Concentration (ppb)': 'C2H2', 'N2O Concentration (ppb)': 'N2O'}, inplace=True)
+    t0, t1 = tildf.index[0], tildf.index[-1]
+    time = tildf.index
+
 
     airmar_headers = ['PC', 'UTC hhmmss', 'UTC Year', 'UTC Month', 'UTC Day',
         'Latitude (DD.ddd +N)', 'Longitude (DDD.ddd -W)', 'GPS Quality',
@@ -50,8 +52,8 @@ if __name__ == "__main__":
         ' GPSCorWindSpeed (kts)', 'GPSCorWindSpeed (m/s)',
         'GPSGroundSpeed (m/s)']
     use_headers = ['PC', 'Latitude (DD.ddd +N)', 'Longitude (DDD.ddd -W)',
-        'Altitude (m)', 'Air Temperature (C)', 'RH(%)', 'Dew Point (C)', 
-        'Pressure (bar)','Heading(deg)', 'GPSCorWindDirTrue (deg)', 
+        'Altitude (m)', 'Air Temperature (C)', 'RH(%)', 'Dew Point (C)',
+        'Pressure (bar)','Heading(deg)', 'GPSCorWindDirTrue (deg)',
         'GPSCorWindDirMag (deg)', 'GPSCorWindSpeed (m/s)', 'GPSGroundSpeed (m/s)']
     head_dict = {'Latitude (DD.ddd +N)': 'Lat', 'Longitude (DDD.ddd -W)': 'Lon'}
     wx_files = glob(f"./data/{date}/*WX*")+glob(f"./data/{date}/AIRMAR/*WX*")
@@ -76,38 +78,36 @@ if __name__ == "__main__":
     wxdf.set_index('time', inplace=True)
     wxdf.sort_index(inplace=True)
     wxdf.rename(columns=head_dict, inplace=True)
-    t0, t1 = wxdf.index[0], wxdf.index[-1]
-    time = wxdf.index
-    
-    
-    fig, ax = plt.subplots(1,1, figsize=(16,4), dpi=100)
-    fig.subplots_adjust(right=0.75)
 
-    twin1 = ax.twinx()
-    twin2 = ax.twinx()
+    if makeplot:
+        fig, ax = plt.subplots(1,1, figsize=(16,4), dpi=100)
+        fig.subplots_adjust(right=0.75)
 
-    # Offset the right spine of twin2.  The ticks and label have already been
-    # placed on the right by twinx above.
-    twin2.spines['right'].set_position(("axes", 1.1))
+        twin1 = ax.twinx()
+        twin2 = ax.twinx()
 
-    p1, = ax.plot(time, df1['N2O'], 'b', label="N2O")
-    p2, = twin1.plot(time, df1['C2H2'], 'r',  label="C2H2")
-    p3, = twin2.plot(time, df1['CH4'], 'g', label="i12CH4")
+        # Offset the right spine of twin2.  The ticks and label have already been
+        # placed on the right by twinx above.
+        twin2.spines['right'].set_position(("axes", 1.1))
 
-    ax.set_xlabel("index")
-    ax.set_ylabel("N2O (ppbv)")
-    ax.set_ylim([330,360])
-    ax.set_xlim([t0, t1])
+        p1, = ax.plot(time, tildf['N2O'], 'b', label="N2O")
+        p2, = twin1.plot(time, tildf['C2H2'], 'r',  label="C2H2")
+        p3, = twin2.plot(time, tildf['CH4'], 'g', label="i12CH4")
 
-    ax.grid(axis='y')
-    twin1.set_ylabel("C2H2 (ppbv)")
-    twin1.set_ylim([0, 300])
-    twin2.set_ylabel("CH4 (ppbv)")
-    twin2.set_ylim([1800,3000])
+        ax.set_xlabel("index")
+        ax.set_ylabel("N2O (ppbv)")
+        ax.set_ylim([330,360])
+        ax.set_xlim([t0, t1])
 
-    ax.yaxis.label.set_color(p1.get_color())
-    twin1.yaxis.label.set_color(p2.get_color())
-    twin2.yaxis.label.set_color(p3.get_color())
+        ax.grid(axis='y')
+        twin1.set_ylabel("C2H2 (ppbv)")
+        twin1.set_ylim([0, 300])
+        twin2.set_ylabel("CH4 (ppbv)")
+        twin2.set_ylim([1800,3000])
 
-    # plt.savefig(f'./figures/{date}/{date}_TILDAS_tracer.png', bbox_inches='tight')
-    plt.show()
+        ax.yaxis.label.set_color(p1.get_color())
+        twin1.yaxis.label.set_color(p2.get_color())
+        twin2.yaxis.label.set_color(p3.get_color())
+
+        # plt.savefig(f'./figures/{date}/{date}_TILDAS_tracer.png', bbox_inches='tight')
+        plt.show()
