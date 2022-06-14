@@ -43,14 +43,15 @@ def enhwind(tildf,
 
     try:
         area = np.trapz(ch4, x)
+        mq5, mq95 = np.nanquantile(ch4, [.05, .95])
         mmin = np.nanmin(ch4)
         mmax = np.nanmax(ch4)
-        mq5, mq95 = np.nanquantile(ch4, [.05, .95])
+        enhmax5 = mmax-mq5
         enh5 = mq95-mq5
         time = ch4.index
         avgwind = np.nanmean(wxdf.loc[t0:t1, 'GPSCorWindSpeed (m/s)'])
     except:
-        area, mmin, mmax, mq5, mq95, enh5, time, avgwind = np.full(8, np.nan)
+        area, mmin, mmax, mq5, mq95, enh5, enhmax5, time, avgwind = np.full(8, np.nan)
 
     if plot:
         plotch4 = ch4-mq5
@@ -74,7 +75,7 @@ def enhwind(tildf,
         ax1.tick_params(axis='x', rotation=45)
         plt.show()
     returndf = pd.DataFrame({'avgwind(m/s)': avgwind, 'ch4plumeintg(ppb m)': area, 'ch4min(ppb)': mmin,
-        'ch4max(ppb)': mmax, 'ch4bot5(ppb)': mq5, 'ch4top5(ppb)': mq95, 'ch4enh5(ppb)': enh5}, index=[index])
+        'ch4max(ppb)': mmax, 'ch4bot5(ppb)': mq5, 'ch4top5(ppb)': mq95, 'ch4enh5(ppb)': enh5, 'ch4enhmax5(ppb)': enhmax5}, index=[index])
     return returndf
 
 
