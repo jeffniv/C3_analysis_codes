@@ -51,7 +51,7 @@ def enhwind(tildf,
         time = ch4.index
         avgwind = np.nanmean(wxdf.loc[t0:t1, 'GPSCorWindSpeed (m/s)'])
     except:
-        area, mmin, mmax, mq5, mq95, enh5, enhmax5, time, avgwind = np.full(8, np.nan)
+        area, mmin, mmax, mq5, mq95, enh5, enhmax5, time, avgwind = np.full(9, np.nan)
 
     if plot:
         plotch4 = ch4-mq5
