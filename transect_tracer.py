@@ -78,6 +78,34 @@ def enhwind(tildf,
         'ch4max(ppb)': mmax, 'ch4bot5(ppb)': mq5, 'ch4top5(ppb)': mq95, 'ch4enh5(ppb)': enh5, 'ch4enhmax5(ppb)': enhmax5}, index=[index])
     return returndf
 
+def intg_peak(tildf):
+    '''
+    Plot a slice of TILDAS data and returns integrated peak in (ppm m).User supplied left and right bounds for integration.
+    '''
+    ch4 = tildf.loc[:,'CH4']
+    time = ch4.index
+    mq5 = np.nanquantile(ch4, [.05]) #use this as background CH4
+
+    fig, ax1 = plt.subplots(1, 1, figsize=(5, 4), dpi=150)
+    ax1.plot(time, ch4-mq5)
+    ax1.set_xlabel('Time')
+    ax1.set_ylabel('CH4 enhancement (ppbv)')
+    ax1.tick_params(axis='x', rotation=45)
+    plt.show()
+
+    t0 = input('Enter integration start time (HH:MM:SS):')
+    t1 = input('Enter integration end time (HH:MM:SS)')
+
+    ch4 = tildf.loc[t0:t1,'CH4']
+    lats = tildf.loc[t0:t1,'Lat']
+    lons = tildf.loc[t0:t1,'Lon']
+    dx = haversine_dist(lats, lats.shift(-1), lons, lons.shift(-1))
+    dx.fillna(0, inplace=True)
+    x = np.cumsum(dx.values)
+    area = np.trapz(ch4-mq5, x)
+    return area
+
+
 
 if __name__ == '__main__':
     sttime = sys.argv[1]
