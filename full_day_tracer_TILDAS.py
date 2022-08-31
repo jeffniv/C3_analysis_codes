@@ -11,7 +11,7 @@ from scipy.integrate import simps
 import sys
 import os
 
-makeplot = False
+makeplot = True
 date = sys.argv[1]
 
 if __name__ == "__main__":
@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
         ax.grid(axis='y')
         twin1.set_ylabel("C2H2 (ppbv)")
-        twin1.set_ylim([0, 300])
+        twin1.set_ylim([0, 150])
         twin2.set_ylabel("CH4 (ppbv)")
         twin2.set_ylim([1800,3000])
 
