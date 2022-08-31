@@ -93,9 +93,12 @@ def intg_peak(tildf):
     ax1.tick_params(axis='x', rotation=45)
     plt.show()
 
-    t0 = input('Enter integration start time (HH:MM:SS):')
-    t1 = input('Enter integration end time (HH:MM:SS)')
-
+    t0str = input('Enter integration start time (HH:MM:SS):')
+    t1str = input('Enter integration end time (HH:MM:SS)')
+    yy, mm, dd = time[0].year, time[0].month, time[0].day
+    t0 = pd.Timestamp(f'{yy}-{mm}-{dd}T{t0str}')
+    t1 = pd.Timestamp(f'{yy}-{mm}-{dd}T{t1str}')
+    
     ch4 = tildf.loc[t0:t1,'CH4']
     lats = tildf.loc[t0:t1,'Lat']
     lons = tildf.loc[t0:t1,'Lon']
