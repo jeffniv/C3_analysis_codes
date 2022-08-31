@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 from scipy.integrate import simpson
-from haversine import haversine_dist
+from .haversine import haversine_dist
 
 def log_interp(x, xp, yp):
     ylog = np.interp(x, xp, np.log(yp))
@@ -15,7 +15,7 @@ def retrieve_transect(df, sttime, endtime):
     year, month, day = df.index[0].year, df.index[0].month, df.index[0].day
     t0, t1 = np.datetime64(f'{year}-{month:02d}-{day:02d}T{sttime}'), np.datetime64(f'{year}-{month:02d}-{day:02d}T{endtime}')
     return df.loc[t0:t1].copy()
-    
+
 def calc_transect(df, sourcept, angle_correction=None, interp=True, centroid=False):
     slat, slon = sourcept
     lat = df['Lat'].copy()
@@ -23,7 +23,7 @@ def calc_transect(df, sourcept, angle_correction=None, interp=True, centroid=Fal
     # c2h2_0 = df['C2H2']
     n2o_0 = df['N2O'].copy()
     ch4_0 = df['CH4'].copy()
-    
+
     # find the lowest 10% of the spike, use as enhancement reference
     # c0 = c2h2_0.min()*0.9 + c2h2_0.max()*0.1
     n0 = n2o_0.min()*0.9 + n2o_0.max()*0.1
@@ -34,7 +34,7 @@ def calc_transect(df, sourcept, angle_correction=None, interp=True, centroid=Fal
     # c2h2_1[c2h2_1 < 0] = 0
     ch4_1 = ch4_0-m0
     ch4_1[ch4_1 < 0] = 0
-    
+
     #calculate transect slant distances
     if centroid:
         x = np.arange(n2o_0.size)
@@ -46,15 +46,15 @@ def calc_transect(df, sourcept, angle_correction=None, interp=True, centroid=Fal
     y0 = haversine_dist(ctrlat, slat, ctrlon, slon)
     dh0 = haversine_dist(ctrlat, lat, ctrlon, lon)
     dh0[0:maxn2o] = -dh0[0:maxn2o]
-    
+
     if interp:
-        #interpolate slate concentrations
+        #interpolate slant concentrations
         dh = np.arange(-250, 251)
         n2o_1 = np.interp(dh, dh0, n2o_1)
         ch4_1 = np.interp(dh, dh0, ch4_1)
     else:
         dh = dh0
-    
+
     #calculate crosswind and downwind distances for interpolated points
     dy = np.zeros(dh.size)
     dx = np.zeros(dh.size)
@@ -64,10 +64,10 @@ def calc_transect(df, sourcept, angle_correction=None, interp=True, centroid=Fal
         dx = dh*np.abs(np.cos(angle_correction*dtor))
     else:
         dx = dh.copy()
-     
+
     return [n2o_1, ch4_1, dh, dx, dy, y0]
 
-    
+
 if __name__ == '__main__':
     '''
     Main script is not fully operational.
@@ -81,15 +81,15 @@ if __name__ == '__main__':
     """
     dft = retrieve_transect(df1, sttime, endtime)
     [n2o_1, ch4_1, dh, dx, dy, y0] = calc_transect(dft, sourcept, angle_correction=21)
-    
+
     n_intg = simpson(n2o_1, dh)
     # c_intg = simpson(c2h2_1)
     m_intg = simpson(ch4_1, dh)
-    
+
     # tr_ratio = n_intg/c_intg
     nc_ratio = m_intg/n_intg
-    
-    
+
+
     """
     Plot plume.
     """
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     # Offset the right spine of twin2.  The ticks and label have already been
     # placed on the right by twinx above.
-    twin2.spines['right'].set_position(("axes", .91))    
+    twin2.spines['right'].set_position(("axes", .91))
     p1, = ax.plot(dh, n2o_1, 'b', label="N2O")
     p3, = twin2.plot(dh, ch4_1, 'g', label="CH4")
 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     twin2.yaxis.label.set_color(p3.get_color())
 
     ax.text(.05, .95, f'CH4 plume intg.(ppm m): {m_intg: 2.4f}\nN2O plume intg.(ppm m): \
-    {n_intg: 2.4f}\nCH4/N2O ratio: {nc_ratio: 2.4f}', 
+    {n_intg: 2.4f}\nCH4/N2O ratio: {nc_ratio: 2.4f}',
             transform=ax.transAxes, bbox=dict(boxstyle="round", ec='k', fc='lightcyan', alpha=0.5), ha='left', va='top')
     # ax.set_title('Integration method')
     plt.show()
