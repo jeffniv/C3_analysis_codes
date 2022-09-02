@@ -85,9 +85,10 @@ def intg_peak(tildf):
     ch4 = tildf.loc[:,'CH4']
     time = ch4.index
     mq5 = np.nanquantile(ch4, [.05]) #use this as background CH4
-
-    fig, ax1 = plt.subplots(1, 1, figsize=(5, 4), dpi=150)
-    ax1.plot(time, ch4-mq5)
+    plotch4 = ch4-mq5
+    fig, ax1 = plt.subplots(1, 1, figsize=(8, 3), dpi=100)
+    ax1.plot(time, plotch4)
+    ax1.grid()
     ax1.set_xlabel('Time')
     ax1.set_ylabel('CH4 enhancement (ppbv)')
     ax1.tick_params(axis='x', rotation=45)
@@ -106,7 +107,19 @@ def intg_peak(tildf):
     dx.fillna(0, inplace=True)
     x = np.cumsum(dx.values)
     area = np.trapz(ch4-mq5, x)
-    return area
+    print(f'CH4 background is: {mq5} ppb.')
+    print(f'Integrated Peak is: {area} (ppb m)')
+    svin = input(f'Would you like to save image? (y/n)')
+    if svin.lower() == 'y':
+        savedir = f'./figures/{yy}{mm}{dd}/'
+        fig, ax1 = plt.subplots(1, 1, figsize=(8, 3), dpi=100)
+        ax1.plot(time, plotch4)
+        ax1.grid()
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel('CH4 enhancement (ppbv)')
+        ax1.tick_params(axis='x', rotation=45)
+        plt.savefig(f'{savedir}/intgpeak_{yy}-{mm}-{dd}T{t0str}-{t1str}.png'.replace(':', ''), format='png')
+    return
 
 
 
