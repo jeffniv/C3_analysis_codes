@@ -96,10 +96,12 @@ def intg_peak(tildf):
 
     t0str = input('Enter integration start time (HH:MM:SS):')
     t1str = input('Enter integration end time (HH:MM:SS)')
-    yy, mm, dd = time[0].year, time[0].month, time[0].day
+    yy = f'{time[0].year:04d}'
+    mm = f'{time[0].month:02d}'
+    dd = f'{time[0].day:02d}'
     t0 = pd.Timestamp(f'{yy}-{mm}-{dd}T{t0str}')
     t1 = pd.Timestamp(f'{yy}-{mm}-{dd}T{t1str}')
-    
+
     ch4 = tildf.loc[t0:t1,'CH4']
     lats = tildf.loc[t0:t1,'Lat']
     lons = tildf.loc[t0:t1,'Lon']
