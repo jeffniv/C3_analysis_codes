@@ -115,10 +115,11 @@ def intg_peak(tildf):
     if svin.lower() == 'y':
         savedir = f'./figures/{yy}{mm}{dd}/'
         fig, ax1 = plt.subplots(1, 1, figsize=(8, 3), dpi=100)
-        ax1.plot(time, plotch4)
-        ax1.axvline(t0, color='tab:red')
+        ax1.plot(time, plotch4, label=f'Peak intg.:{area:1.3f} (ppb m)')
+        ax1.axvline(t0, color='tab:red', label='intg. bounds')
         ax1.axvline(t1, color='tab:red')
         ax1.grid()
+        ax1.legend(framealpha=0.6)
         ax1.set_xlabel('Time')
         ax1.set_ylabel('CH4 enhancement (ppbv)')
         ax1.tick_params(axis='x', rotation=45)
