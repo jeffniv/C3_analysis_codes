@@ -116,6 +116,8 @@ def intg_peak(tildf):
         savedir = f'./figures/{yy}{mm}{dd}/'
         fig, ax1 = plt.subplots(1, 1, figsize=(8, 3), dpi=100)
         ax1.plot(time, plotch4)
+        ax1.axvline(t0, color='tab:red')
+        ax1.axvline(t1, color='tab:red')
         ax1.grid()
         ax1.set_xlabel('Time')
         ax1.set_ylabel('CH4 enhancement (ppbv)')
