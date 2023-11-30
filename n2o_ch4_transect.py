@@ -5,6 +5,7 @@
 import numpy as np
 import pandas as pd
 from scipy.integrate import simpson
+# from scipy.integrate import simps as simpson
 from .haversine import haversine_dist
 
 def log_interp(x, xp, yp):
@@ -24,10 +25,9 @@ def calc_transect(df, sourcept, angle_correction=None, interp=True, centroid=Fal
     n2o_0 = df['N2O'].copy()
     ch4_0 = df['CH4'].copy()
 
-    # find the lowest 10% of the spike, use as enhancement reference
-    # c0 = c2h2_0.min()*0.9 + c2h2_0.max()*0.1
-    n0 = n2o_0.min()*0.9 + n2o_0.max()*0.1
-    m0 = ch4_0.min()*0.9 + ch4_0.max()*0.1
+    # the lowest 10% as enhancement reference
+    n0 = n2o_0.quantile(.1)
+    m0 = ch4_0.quantile(.1)
     n2o_1 = n2o_0-n0
     n2o_1[n2o_1 < 0] = 0
     # c2h2_1 = c2h2_0-c0
