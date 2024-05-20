@@ -6,14 +6,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import statsmodels.api as sm
-import cartopy.crs as ccrs
-import cartopy.io.img_tiles as cimgt
-from .haversine import haversine_dist
+# import cartopy.crs as ccrs
+# import cartopy.io.img_tiles as cimgt
+from C3_analysis_codes.haversine import haversine_dist
 
 verbose = False
 
-c2h2_flux = 0
-n2o_flux = 10
+c2h2_flux = 7.
+n2o_flux = 25.
 
 def enhwind(tildf,
             wxdf,
@@ -24,7 +24,7 @@ def enhwind(tildf,
             plot=False,
             satellite=False,
             verbose=False):
-    if not type(sttime)==str:# missing times in .xls
+    if not type(sttime)==str:# check for missing times
         area, mmin, mmax, mq5, mq95, enh5, time, avgwind = np.full(8, np.nan)
         returndf = pd.DataFrame({'avgwind(m/s)': avgwind, 'ch4plumeintg(ppb m)': area, 'ch4min(ppb)': mmin,
             'ch4max(ppb)': mmax, 'ch4bot5(ppb)': mq5, 'ch4top5(ppb)': mq95, 'ch4enh5(ppb)': enh5}, index=[index])
@@ -131,36 +131,52 @@ def intg_peak(tildf):
 if __name__ == '__main__':
     sttime = sys.argv[1]
     endtime = sys.argv[2]
+    t0, t1 = np.datetime64(f'{year}-{month}-{day}T{sttime}'), np.datetime64(f'{year}-{month}-{day}T{endtime}')
+    if t1<t0:
+        raise ValueError('Start time must be before end time.')
     save = bool(int(sys.argv[3]))
     year, month, day = date[:4], date[4:6], date[6:]
     if save:
         outtxt = open(f'./figures/{date}/{date}_{sttime.replace(":", "")}T{endtime.replace(":", "")}_regression_output.txt', 'w')
-
+    
+    print(f'N2O flow rate is {n2o_flux} and C2H2 flow rate is {c2h2_flux}.')
+    df1 = tildf
     """
     Start integration method.
 
     """
-    t0, t1 = np.datetime64(f'{year}-{month}-{day}T{sttime}'), np.datetime64(f'{year}-{month}-{day}T{endtime}')
-    # find the lowest 10% of the spike, use as enhancement reference
-    c0 = df1.loc[t0:t1,'C2H2'].min()*0.9 + df1.loc[t0:t1,'C2H2'].max()*0.1
-    n0 = df1.loc[t0:t1,'N2O'].min()*0.9 + df1.loc[t0:t1,'N2O'].max()*0.1
-    m0 = df1.loc[t0:t1,'CH4'].min()*0.9 + df1.loc[t0:t1,'CH4'].max()*0.1
 
+    # find the lowest 10% of the spike, use as enhancement reference
+    c2h2 = 1.2131*df1.loc[t0:t1,'C2H2']
+    n2o = 1.2016*df1.loc[t0:t1,'N2O']-4.681
+    
+    c2h2_0 = c2h2.quantile(.1)
+    n2o_0 = n2o.quantile(.1)
+    m_0 = df1.loc[t0:t1,'CH4'].quantile(.1)
+    
+    n2o_1 = n2o-n2o_0
+    n2o_1[n2o_1 < 0] = 0
+    c2h2_1 = c2h2-c2h2_0
+    c2h2_1[c2h2_1 < 0] = 0
+    ch4_1 = df1.loc[t0:t1, 'CH4']-m_0
+    ch4_1[ch4_1 < 0] = 0
+    n_area = simps(n2o_1)
+    c_area = simps(c2h2_1)
+    m_area = simps(ch4_1)
+    nc_ratio = m_area/n_area
+    cc_ratio = m_area/c_area
+    tr_ratio = n_area/c_area
+    nc_emit = nc_ratio*n2o_flux/22.4*16.043*60/1e3 # mol/L * g/mol * min/hr *kg/g
+    cc_emit = cc_ratio*c2h2_flux/22.4*16.043*60/1e3
+    
+    
     fig = plt.figure(figsize=(13, 9), dpi=100)
     ax = fig.add_subplot(2, 2, 1)
     twin1 = ax.twinx()
     twin2 = ax.twinx()
-
     # Offset the right spine of twin2.  The ticks and label have already been
     # placed on the right by twinx above.
     twin2.spines['right'].set_position(("axes", .91))
-    n2o_1 = df1.loc[t0:t1, 'N2O']-n0
-    n2o_1[n2o_1 < 0] = 0
-    c2h2_1 = df1.loc[t0:t1, 'C2H2']-c0
-    c2h2_1[c2h2_1 < 0] = 0
-    ch4_1 = df1.loc[t0:t1, 'CH4']-m0
-    ch4_1[ch4_1 < 0] = 0
-
     time = n2o_1.index
     p1, = ax.plot(time, n2o_1, 'b', label="N2O")
     p2, = twin1.plot(time, c2h2_1, 'r',  label="C2H2")
@@ -168,28 +184,21 @@ if __name__ == '__main__':
 
     ax.set_xlabel("index")
     ax.set_ylabel("N2O (ppbv)")
-    top = n2o_1.max() + 10 - (n2o_1.max() % 10)
+    top = n2o_1.max()*2//1
     ax.set_ylim([0, top])
     ax.set_xlim([t0, t1])
     ax.grid(axis='y')
     twin1.set_ylabel("C2H2 (ppbv)")
-    top = c2h2_1.max() + 10 - (c2h2_1.max() % 10)
+    top = c2h2_1.max()*2//1
     twin1.set_ylim([0, top])
     twin2.set_ylabel("CH4 (ppbv)")
-    top = ch4_1.max() + 10 - (ch4_1.max() % 10)
+    top = ch4_1.max()*2//1
     twin2.set_ylim([0, top])
 
     ax.yaxis.label.set_color(p1.get_color())
     twin1.yaxis.label.set_color(p2.get_color())
     twin2.yaxis.label.set_color(p3.get_color())
-
-    nc_ratio = simps(ch4_1)/simps(n2o_1)
-    cc_ratio = simps(ch4_1)/simps(c2h2_1)
-    tr_ratio = simps(n2o_1)/simps(c2h2_1)
-
-    nc_emit = nc_ratio*n2o_flux/22.4*16.043*60/1e3 # mol/L * g/mol * min/hr *kg/g
-    cc_emit = cc_ratio*c2h2_flux/22.4*16.043*60/1e3
-
+    ax.tick_params(axis='x', rotation=30)
     ax.text(.05, .95, f'CH4/N2O ratio: {nc_ratio: 2.4f}\nCH4/C2H2 ratio: {cc_ratio: 2.4f}\nN2O/C2H2 ratio: \
     {tr_ratio: 2.4f}\nCH4 emissions (N2O): {nc_emit: 2.4f} kg/hr\nCH4 emissions (C2H2): {cc_emit: 2.4f} kg/hr',
             transform=ax.transAxes, bbox=dict(boxstyle="round", ec='k', fc='lightcyan', alpha=0.5), ha='left', va='top')
@@ -198,10 +207,8 @@ if __name__ == '__main__':
     """
     Start single tracer regression (N2O).
     """
-
     results = sm.OLS(ch4_1, n2o_1).fit()
-
-    beta1 = results.predict([1])[0]
+    beta1 = results.params[0]
     ch4_flux = beta1*n2o_flux/22.4*16.043*60/1e3
     r2 = results.rsquared
 
@@ -235,7 +242,7 @@ if __name__ == '__main__':
 
     results = sm.OLS(ch4_1, c2h2_1).fit()
 
-    beta1 = results.predict([1])[0]
+    beta1 = results.params[0]
     ch4_flux = beta1*c2h2_flux/22.4*16.043*60/1e3
     r2 = results.rsquared
 
@@ -267,14 +274,14 @@ if __name__ == '__main__':
     """
 
     results = sm.OLS(n2o_1, c2h2_1).fit()
-    nc_ratio = results.predict([1])[0]
-    r2nc = results.rsquared_adj
+    nc_ratio = results.params[0]
+    r2nc = np.corrcoef(n2o_1, c2h2_1)[0, 1]
 
     exo = pd.concat([c2h2_1, n2o_1], axis=1)
     results = sm.OLS(ch4_1, exo).fit()
 
-    beta1 = results.predict([0, 1])[0]
-    beta2 = results.predict([1, 0])[0]
+    beta1 = results.params[0]
+    beta2 = results.params[1]
     ch4_flux = (beta1*c2h2_flux + beta2*n2o_flux)/22.4*16.043*60/1e3
     r2 = results.rsquared_adj
 
@@ -285,8 +292,8 @@ if __name__ == '__main__':
     ax.plot(x, y, 'r--')
     ax.set_ylabel('N2O (ppb)')
     ax.set_xlabel('C2H2 (ppb)')
-    ax.text(.05, .95, f'N2O/C2H2 ratio: {nc_ratio: 2.4f}\nN2O/C2H2 corr.: {r2nc: 2.4f}\nCH4 emissions: {ch4_flux: 2.4f} kg/hr\nR$^2$: {r2: 2.4f}',
-            transform=ax.transAxes, bbox=dict(boxstyle="round", ec='k', fc='lightcyan',), ha='left', va='top')
+    ax.text(.05, .95, f'N2O/C2H2 ratio: {tr_ratio: 2.4f}\nN2O/C2H2 corr.: {r2nc: 2.4f}\nRatio(Plume/Release): {(tr_ratio/(n2o_flux/c2h2_flux)):2.4f}\nCH4 emissions: {ch4_flux: 2.4f} kg/hr\nR$^2$: {r2: 2.4f}',
+            transform=ax.transAxes, bbox=dict(boxstyle="round", ec='k', fc='lightcyan', alpha=0.5), ha='left', va='top')
 
     # x1 = np.linspace(n2o_1.min(), n2o_1.max(), 30)
     # x2 = np.linspace(c2h2_1.min(), c2h2_1.max(), 30)
@@ -306,7 +313,9 @@ if __name__ == '__main__':
     plt.subplots_adjust(top=0.93)
     fig.suptitle(f'{date} {sttime}-{endtime} transect')
     if save:
-        plt.savefig(f'./figures/{date}/{date}_{sttime.replace(":", "")}T{endtime.replace(":", "")}_transect.png', bbox_inches='tight')
+        fig_name = f'./figures/{date}/{date}_{sttime.replace(":", "")}T{endtime.replace(":", "")}_transect.png'
+        plt.savefig(fig_name, bbox_inches='tight')
+        print(f'Output saved to {fig_name}')
         outtxt.write(f'Dual-tracer regression flux: {ch4_flux: 2.4f} kg CH4/hr\n\n')
         outtxt.write(str(results.summary()))
         outtxt.close()
